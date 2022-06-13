@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.test.pro.mapper.TUserMapper">
+	<resultMap id="BaseResultMap"
+		type="com.test.pro.entity.T_User">
+		<result column="id" property="id" jdbcType="INTEGER" />
+		<result column="username" property="userName"
+			jdbcType="VARCHAR" />
+		<result column="email" property="email" jdbcType="VARCHAR" />
+		<result column="password" property="passWord"
+			jdbcType="VARCHAR" />
+	</resultMap>
+	<sql id="selectColumn">
+		id, email,username, password
+	</sql>
+	<select id="queryUserByUsernameOrEmail" resultMap="BaseResultMap">
+		select
+		<include refid="selectColumn" />
+		from
+		t_user
+		where username=#{username,jdbcType=VARCHAR} or
+		email=#{email,jdbcType=VARCHAR} or id=#{userid,jdbcType=INTEGER}
+	</select>
+	<select id="queryUserByUserId"
+		parameterType="java.lang.Integer" resultMap="BaseResultMap">
+		select
+		<include refid="selectColumn" />
+		from
+		t_user
+		where id=#{username,jdbcType=INTEGER}
+	</select>
+	<insert id="insertUser">
+		insert into t_user(username,email,password)
+		values
+		(
+		#{userName},
+		#{email},
+		#{passWord}
+		)
+	</insert>
+</mapper>

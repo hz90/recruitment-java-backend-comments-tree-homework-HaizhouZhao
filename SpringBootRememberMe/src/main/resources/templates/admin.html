@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<!-- security在异步请求的情况下对防止csrf攻击的一些处理 -->
+<meta name="_csrf" th:content="${_csrf.token}" />
+<meta name="_csrf_header" th:content="${_csrf.headerName}" />
+<meta charset="UTF-8">
+<title>留言板</title>
+<style>
+div{border-top:1px solid #000} 
+* {
+	margin: 0;
+	padding: 0;
+	list-style: none
+}
+
+.mask {
+	background-color: rgba(0, 0, 0, 0.2);
+	width: 100%;
+	height: 100%;
+	position: fixed;
+	top: 0;
+	left: 0;
+}
+
+.prompt_box {
+	width: 500px;
+	height: 300px;
+	background: #ffffff;
+	border-radius: 6px;
+	position: fixed;
+	top: 25%;
+	left: 50%;
+	margin-left: -200px;
+	overflow: hidden;
+}
+
+.prompt_box .prompt_title {
+	height: 40px;
+	line-height: 40px;
+	padding-left: 20px;
+	border-bottom: 2px solid #1a9ebf;
+	background: #e6e6e6;
+	position: relative;
+}
+
+.prompt_box .prompt_title h3 {
+	font-size: 16px;
+	color: #333333;
+	margin-top: 0;
+}
+
+.prompt_box .prompt_cancel {
+	width: 24px;
+	height: 24px;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.prompt_box .prompt_cont {
+	position: relative;
+	height: 258px;
+}
+
+.prompt_box .prompt_cont .prompt_text {
+	line-height: 140px;
+	padding-left: 100px;
+}
+
+.prompt_box .prompt_cont .prompt_sure{
+	position: absolute;
+	right: 20px;
+	bottom: 15px;
+	width: 50px;
+	height: 26px;
+	background: #1a9ebf;
+	border-radius: 5px;
+	color: #ffffff;
+	font-size: 14px;
+	line-height: 26px;
+	text-align: center;
+}
+
+.hide {
+	display: none;
+}
+
+.show {
+	display: block;
+}
+</style>
+<script th:src="@{/js/jquery-3.4.1.min.js}"></script>
+<script>
+	
+	//security在异步请求的情况下对防止csrf攻击的一些处理：
+	$(document).ready(function() {
+		var token = $("meta[name='_csrf']").attr("content");
+		var header = $("meta[name='_csrf_header']").attr("content");
+		$(document).ajaxSend(function(e, xhr, options) {
+			xhr.setRequestHeader(header, token);
+		});
+		$('#warningtext').hide();
+		$('.prompt_cancel').click(function() {
+			$('.mask').addClass('hide');
+			$("#contentId").val('');
+		})
+		$('#btnConfirm').click(function() {
+			$("#btnConfirm").attr("disabled", true);
+			//$('.mask').addClass('hide');
+			var accountid=$("#accountid").val();
+			var content=$("#contentarea").val();
+			var fid=$("#contentId").val();
+			if(content==""||content.length<3){
+				$('#warningtext').show();
+				$("#btnConfirm").attr("disabled", false);
+				return;
+			}
+			content=content.substr(0,200);
+			var contentVo={
+					"fid":fid,
+					"userid":accountid,
+					"content":content
+			};
+			$.ajax({
+				type : 'POST',
+				url : "/addContent",
+				data : JSON.stringify(contentVo),
+				dataType : "json",
+				contentType : "application/json;charset=UTF-8",
+				xhrFields : {
+					withCredentials : true
+				//允许跨域带Cookie
+				},
+				success : function(result) {
+					$("#btnConfirm").attr("disabled", false);
+					console.log(result.data);
+					$('.mask').addClass('hide');
+					$("#getAllContent").click();
+					alert("留言成功");
+				},
+				error : function(XMLHttpRequest, textStatus, errorThrown) {
+					location.reload(true);
+					$("#btnConfirm").attr("disabled", false);
+					//login();
+					// 状态码
+					console.log(XMLHttpRequest.status);
+					// 状态
+					console.log(XMLHttpRequest.readyState);
+					// 错误信息   
+					console.log(textStatus);
+					alert(XMLHttpRequest.responseJSON.errorInfo.msg);
+				}
+			});
+		})
+		var max = 200;
+		$('#contentarea').on('input', function() {
+			var text = $(this).val();
+			var len = text.length;
+			$('#count').text(len);
+			if (len > max) {
+				$('#warningtext').show();
+			} else {
+				$('#warningtext').hide();
+			}
+		});
+
+		function getuserInfo() {
+			var accountid = $("#accountid").val();
+			if (accountid == null || accountid == "") {
+				return;
+			}
+			var loginVo = {
+				"accountId" : accountid
+			};
+			$.ajax({
+				type : 'POST',
+				url : "/getUserInfo",
+				data : JSON.stringify(loginVo),
+				dataType : "json",
+				contentType : "application/json;charset=UTF-8",
+				xhrFields : {
+					withCredentials : true
+				//允许跨域带Cookie
+				},
+				success : function(result) {
+					console.log(result.data);
+					$("#displayname").text(result.data);
+				},
+				error : function(XMLHttpRequest, textStatus, errorThrown) {
+					$("#registeruser").attr("disabled", false);
+					location.reload();
+					//login();
+					// 状态码
+					console.log(XMLHttpRequest.status);
+					// 状态
+					console.log(XMLHttpRequest.readyState);
+					// 错误信息   
+					console.log(textStatus);
+					alert(XMLHttpRequest.responseJSON.errorInfo.msg);
+				}
+			});
+		}
+		getuserInfo();
+		$("#getAllContent").click();
+
+	});
+</script>
+</head>
+<body>
+	<h2>留言板</h2>
+	<div th:if="${#request.userPrincipal} ne null">
+	<h3>
+		welcome : <span id="displayname"
+			th:utext="${#request.userPrincipal} eq null?null:${#request.userPrincipal.name}"></span>
+	</h3>
+	<input type="hidden" id="accountid"
+		th:value="${#request.userPrincipal} eq null?null:${#request.userPrincipal.name}" />
+
+	<form th:action="@{/j_spring_security_logout}" method="post">
+		<input type="hidden" th:name="${_csrf.parameterName}"
+			th:value="${_csrf.token}" /> <input type="submit" value="Logout" />
+	</form>
+	</div>
+	<div th:if="${#request.userPrincipal} eq null">
+	    未登录<button id="registeruser" onclick="login()">登录</button><button id="registeruser" onclick="register()">注册</button>
+	</div>
+	<br>
+	<button  onclick="commenttext('')">发表留言</button>
+	<br> 下面是留言板
+	<button id="getAllContent" onclick="getAllContent()">获取最新留言板</button>
+	<div id="maincontent">
+	</div>
+	<div class="mask hide">
+		<div class="prompt_box">
+			<div class="prompt_title">
+				<h3 class="prompt_titleh">请输入留言</h3>
+				<span class="prompt_cancel">x</span>
+			</div>
+			<div class="prompt_cont">
+			    <input type="hidden" id="contentId" />
+				<textarea id="contentarea" rows="5" cols="50" style="width: 495px; height: 182px;"></textarea>
+				<div ><span id="count">0</span>/200<span id="warningtext"><font  color="red">字数最少为3最大字数为200，请删除多余的文字，如果提交会自动截取</font></span></div>
+				<br>
+				<button id="btnConfirm" class="prompt_sure">确定</button>
+			</div>
+		</div>
+	</div>
+</body>
+	<script>
+	function commenttext(obj) {
+		//$(".commentbutton").attr("disabled", true);
+		var accountid = $("#accountid").val();
+		if (accountid == null || accountid == "") {
+			login();
+		}
+		$("#contentId").val(obj);
+		$("#contentarea").val('');
+		$('#count').text('0');
+		$('#warningtext').hide();
+		$('.mask').removeClass('hide');
+	}
+	function parseJson(jsonobj,kbn){
+		if(jsonobj==""){
+			return;
+		}
+		
+		for ( var tmp in jsonobj) {
+			var prefix=kbn+"->"+tmp+"";
+				$("#maincontent").append(
+						"<div>楼层：" +prefix+ "   留言内容：" + jsonobj[tmp].content + "<br>"
+								+ "用户名:" + jsonobj[tmp].username + "  评论时间:"
+								+ jsonobj[tmp].createDate + "<button class=\"commentbutton\" onclick=\"commenttext("+jsonobj[tmp].id+")\">评论</button>"+"</div>");
+				parseJson(jsonobj[tmp].lst,prefix);
+			}
+		}
+		function getAllContent() {
+			$.ajax({
+				type : 'POST',
+				url : "/getAllContent",
+				data : null,
+				dataType : "json",
+				contentType : "application/json;charset=UTF-8",
+				xhrFields : {
+					withCredentials : true
+				//允许跨域带Cookie
+				},
+				success : function(result) {
+					console.log(result.data);
+					$("#maincontent").empty();
+					parseJson(result.data,"");
+					
+				},
+				error : function(XMLHttpRequest, textStatus, errorThrown) {
+					//login();
+					location.reload();
+					// 状态码
+					console.log(XMLHttpRequest.status);
+					// 状态
+					console.log(XMLHttpRequest.readyState);
+					// 错误信息   
+					console.log(textStatus);
+					alert(XMLHttpRequest.responseJSON.errorInfo.msg);
+				}
+			});
+		}
+
+		function login() {
+			window.location.href = "/login";
+		}
+		function register() {
+			window.location.href = "/register";
+		}
+	</script>
+</html>

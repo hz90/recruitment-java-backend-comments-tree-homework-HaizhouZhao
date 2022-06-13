@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.test.pro.mapper.TContentMapper">
+	<resultMap id="BaseResultMap"
+		type="com.test.pro.entity.T_Content">
+		<result column="id" property="id" jdbcType="INTEGER" />
+		<result column="fid" property="fid" jdbcType="INTEGER" />
+		<result column="username" property="username" jdbcType="VARCHAR" />
+		<result column="userid" property="userid" jdbcType="INTEGER" />
+		<result column="createdate" property="CreateDate" jdbcType="VARCHAR" />
+		<result column="content" property="content" jdbcType="VARCHAR" />
+		  <collection property="lst" column="id" select="getNode" ofType="com.test.pro.entity.T_Content">
+
+        </collection>
+	</resultMap>
+	<sql id="selectColumn">
+		c.id, fid,userid, username,content,createdate
+	</sql>
+	<select id="getAllContent" resultMap="BaseResultMap">
+		select
+		<include refid="selectColumn" />
+		from
+		t_content c left join t_user u on u.id=c.userid where c.fid is null order by createdate desc
+	</select>
+	<select id="getNode" resultMap="BaseResultMap">
+		select
+		<include refid="selectColumn" />
+		from
+		t_content c left join t_user u on u.id=c.userid where c.fid=#{id} order by createdate desc
+	</select>
+	<insert id="insertContent">
+		insert into t_content(fid,userid,content)
+		values
+		(
+		#{fid},
+		#{userid},
+		#{content}
+		)
+	</insert>
+</mapper>
